@@ -1,6 +1,10 @@
 import pygame, sys
 from pygame.locals import *
 
+from constants import *
+from helpers import *
+from event_handlers import *
+
 #Set up pygame
 pygame.init()
 
@@ -8,93 +12,78 @@ pygame.init()
 WIDTH = 800
 HEIGHT = 600
 TILE_DIM = 16
-windowSurface = pygame.display.set_mode((WIDTH, HEIGHT), 0 , 32)
-pygame.display.set_caption('Hello World')
-
-#Set up the colors
-BLACK = (0,0,0)
-RED = (255,0,0)
-GREEN = (0,255,0)
-BLUE = (0,0,255)
-WHITE = (255,255,255)
-YELLOW = (255,255,0)
+window_surface = pygame.display.set_mode((WIDTH, HEIGHT), 0 , 32)
+pygame.display.set_caption('builder-game')
 
 #Set up fonts
-basicFont = pygame.font.Font('./Minecraft.ttf', TILE_DIM)
+main_font = pygame.font.Font('./Minecraft.ttf', TILE_DIM)
 
-target_pos = (0,0)
-player_row_col = [0,0]
+target_coords = (0,0)
 
 current_room_width = 50
 current_room_height = 37
-current_room = [['' for x in range(50)] for y in range(37)]
-mouse_down = False
-player_moving = False 
+current_room = [['' for x in range(current_room_width)] for y in range(current_room_height)]
 
-def tuple_op(t, func):
-    return tuple(map(func, t))
+initial_player_row = current_room_height//2
+initial_player_col = current_room_width//2
+
+current_room[initial_player_row][initial_player_col] = player.symbol
+player.row_col = [initial_player_row, initial_player_col]
+
+blocking_tiles = ['#']
+mouse_down = False
 
 #Run the game loop
 while True:
     # clear window
-    windowSurface.fill(BLACK)
+    window_surface.fill(colors.bg_color)
+
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
 
         # get mouse move
-        if event.type == MOUSEMOTION:
-            target_pos = tuple_op(event.pos, lambda x: int(x/TILE_DIM)*TILE_DIM)
+        elif event.type == MOUSEMOTION:
+            target_coords = tuple_op(event.pos, lambda x: int(x/TILE_DIM)*TILE_DIM)
 
         # get mouse click
-        if event.type == MOUSEBUTTONDOWN:
+        elif event.type == MOUSEBUTTONDOWN:
             mouse_down = True
 
         # get mouse release
-        if event.type == MOUSEBUTTONUP:
+        elif event.type == MOUSEBUTTONUP:
             mouse_down = False
 
         # get key press
-        if event.type == KEYDOWN:
-            index = 0
-            increment = 0 
-            if event.key == K_w:
-                index = 0
-                increment = -1
-            if event.key == K_a:
-                index = 1
-                increment = -1
-            if event.key == K_s:
-                index = 0
-                increment = 1
-            if event.key == K_d:
-                index = 1
-                increment = 1
-
-            new_player_row_col = player_row_col.copy() 
-            new_player_row_col[index] += increment
-
-            x = new_player_row_col[1]
-            y = new_player_row_col[0]
-            if not current_room[y][x]:
-                old_x = player_row_col[1]
-                old_y = player_row_col[0]
-                current_room[old_y][old_x] = ''
-
-                player_row_col = new_player_row_col
-                current_room[y][x] = '@'
+        elif event.type == KEYDOWN:
+            keydown_handler(event, player, current_room, blocking_tiles)
 
 
+    # process state after events handled
     if mouse_down:
-        t = tuple_op(target_pos, lambda x: int(x/TILE_DIM))
+        t = tuple_op(target_coords, lambda x: int(x/TILE_DIM))
         row = t[1] 
         col = t[0] 
-        if row < current_room_height and row >= 0 and col < current_room_width and col >= 0:
-            print('player_row_col', player_row_col)
-            # if row != player_row_col[1] and col != player_row_col[0]:
-            print("row: " + str(row) + " col: " + str(col))
-            if not current_room[row][col]:
+        player_x = player.row_col[1]
+        player_y = player.row_col[0]
+        player.action = 'build'
+
+        # handle user interaction with space
+        conditions = [
+            # check if within bounds
+            row < current_room_height,
+            row >= 0,
+            col < current_room_width,
+            col >= 0,
+            # check if space is empty
+            not current_room[row][col],
+            # check if within player range
+            abs(player_x - col) <= player.reach,
+            abs(player_y - row) <= player.reach,
+        ]
+        if all(conditions) and player.action:
+            if player.action == 'build':
                 current_room[row][col] = '#'
 
     # draw blocks
@@ -102,24 +91,31 @@ while True:
         for tile_index, tile in enumerate(row):
             if tile:
                 # draw text
-                text = basicFont.render(tile, True, WHITE, BLACK)
-                textRect = text.get_rect()
-                textRect.centerx = tile_index*TILE_DIM + TILE_DIM/2
-                textRect.centery = row_index*TILE_DIM + TILE_DIM/2
-                windowSurface.blit(text, textRect)
+                tile_color = colors.brown
+                if tile == player.symbol:
+                 tile_color = player.color
 
-    # draw player
-    text = basicFont.render('@', True, YELLOW, BLACK)
-    textRect = text.get_rect()
-    textRect.centerx = player_row_col[1]*TILE_DIM + TILE_DIM/2
-    textRect.centery = player_row_col[0]*TILE_DIM + TILE_DIM/2
-    windowSurface.blit(text, textRect)
-
+                text = main_font.render(tile, True, tile_color, colors.bg_color)
+                text_rect = text.get_rect()
+                text_rect.centerx = tile_index*TILE_DIM + TILE_DIM/2
+                text_rect.centery = row_index*TILE_DIM + TILE_DIM/2
+                window_surface.blit(text, text_rect)
 
 
     # draw target
-    x_coord = target_pos[0]
-    y_coord = target_pos[1]
-    pygame.draw.rect(windowSurface, RED, (x_coord, y_coord, TILE_DIM, TILE_DIM), 1)
+    x_coord = target_coords[0]
+    y_coord = target_coords[1]
+
+    print(target_coords)
+
+    target_coords_normalized = tuple_op(target_coords, lambda x: int(x/TILE_DIM))
+    x_coord_normalized = target_coords_normalized[0]
+    y_coord_normalized = target_coords_normalized[1]
+
+    target_color = colors.white 
+    if abs(player.row_col[1] - x_coord_normalized) <= player.reach and abs(player.row_col[0] - y_coord_normalized) <= player.reach:
+        target_color = colors.green
+
+    pygame.draw.rect(window_surface, target_color, (x_coord, y_coord, TILE_DIM, TILE_DIM), 1)
 
     pygame.display.update()
