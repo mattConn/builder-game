@@ -20,14 +20,10 @@ main_font = pygame.font.Font('./Minecraft.ttf', TILE_DIM)
 
 target_coords = (0,0)
 
-current_room_width = 50
-current_room_height = 37
-current_room = [['' for x in range(current_room_width)] for y in range(current_room_height)]
+initial_player_row = current_room.height//2
+initial_player_col = current_room.width//2
 
-initial_player_row = current_room_height//2
-initial_player_col = current_room_width//2
-
-current_room[initial_player_row][initial_player_col] = player.symbol
+current_room.set(initial_player_row, initial_player_col, player.symbol)
 player.row_col = [initial_player_row, initial_player_col]
 
 blocking_tiles = ['#']
@@ -50,10 +46,17 @@ while True:
         # get mouse click
         elif event.type == MOUSEBUTTONDOWN:
             mouse_down = True
+            # get left click
+            if event.button == 1:
+                player.action = 'build'
+            # get right click
+            elif event.button == 3:
+                player.action = 'break'
 
         # get mouse release
         elif event.type == MOUSEBUTTONUP:
             mouse_down = False
+            player.action = None
 
         # get key press
         elif event.type == KEYDOWN:
@@ -67,27 +70,27 @@ while True:
         col = t[0] 
         player_x = player.row_col[1]
         player_y = player.row_col[0]
-        player.action = 'build'
 
         # handle user interaction with space
         conditions = [
             # check if within bounds
-            row < current_room_height,
+            row < current_room.height,
             row >= 0,
-            col < current_room_width,
+            col < current_room.width,
             col >= 0,
-            # check if space is empty
-            not current_room[row][col],
             # check if within player range
             abs(player_x - col) <= player.reach,
             abs(player_y - row) <= player.reach,
         ]
         if all(conditions) and player.action:
-            if player.action == 'build':
-                current_room[row][col] = '#'
+            target_tile = current_room.get(row, col)
+            if player.action == 'build' and target_tile == '':
+                current_room.set(row, col, '#')
+            elif player.action == 'break' and target_tile != '@':
+                current_room.set(row, col, '')
 
     # draw blocks
-    for row_index, row in enumerate(current_room):
+    for row_index, row in enumerate(current_room.matrix):
         for tile_index, tile in enumerate(row):
             if tile:
                 # draw text
@@ -106,11 +109,11 @@ while True:
     x_coord = target_coords[0]
     y_coord = target_coords[1]
 
-    print(target_coords)
-
     target_coords_normalized = tuple_op(target_coords, lambda x: int(x/TILE_DIM))
     x_coord_normalized = target_coords_normalized[0]
     y_coord_normalized = target_coords_normalized[1]
+
+    print(target_coords, target_coords_normalized)
 
     target_color = colors.white 
     if abs(player.row_col[1] - x_coord_normalized) <= player.reach and abs(player.row_col[0] - y_coord_normalized) <= player.reach:

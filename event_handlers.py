@@ -21,7 +21,7 @@ def keydown_handler(event, player, current_room, blocking_tiles):
 
     x = new_player_row_col[1]
     y = new_player_row_col[0]
-    next_tile = current_room[y][x] 
+    next_tile = current_room.get(y, x)
 
     conditions = [
         not next_tile,
@@ -29,9 +29,11 @@ def keydown_handler(event, player, current_room, blocking_tiles):
     ]
 
     if all(conditions):
-        old_x = player.row_col[1]
-        old_y = player.row_col[0]
-        current_room[old_y][old_x] = ''
+        result = current_room.set(y, x, player.symbol)
 
-        player.row_col = new_player_row_col
-        current_room[y][x] = player.symbol
+        if result:
+            old_x = player.row_col[1]
+            old_y = player.row_col[0]
+            current_room.set(old_y, old_x, '')
+
+            player.row_col = new_player_row_col
