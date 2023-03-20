@@ -1,3 +1,5 @@
+from helpers import *
+
 # colors
 class Colors:
     black = (0,0,0)
@@ -29,18 +31,15 @@ class Room:
         self.width = width 
         self.height = height 
         self.matrix = [['' for x in range(width)] for y in range(height)]
-    
-    def check_bounds(self, row, col):
-        return row < self.height and row >= 0 and col < self.width and col >= 0
 
     def set(self, row, col, value):
-        if not self.check_bounds(row, col):
+        if not check_bounds(self, row, col):
             return False
         self.matrix[row][col] = value
         return True
 
     def get(self, row, col):
-        if not self.check_bounds(row, col):
+        if not check_bounds(self, row, col):
             return None 
         return self.matrix[row][col]
 

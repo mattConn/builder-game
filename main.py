@@ -113,12 +113,14 @@ while True:
     x_coord_normalized = target_coords_normalized[0]
     y_coord_normalized = target_coords_normalized[1]
 
-    print(target_coords, target_coords_normalized)
+    # check if target in bounds
+    if check_bounds(current_room, y_coord_normalized, y_coord_normalized):
+        print(target_coords, target_coords_normalized)
 
-    target_color = colors.white 
-    if abs(player.row_col[1] - x_coord_normalized) <= player.reach and abs(player.row_col[0] - y_coord_normalized) <= player.reach:
-        target_color = colors.green
+        target_color = colors.white 
+        if abs(player.row_col[1] - x_coord_normalized) <= player.reach and abs(player.row_col[0] - y_coord_normalized) <= player.reach:
+            target_color = colors.green
 
-    pygame.draw.rect(window_surface, target_color, (x_coord, y_coord, TILE_DIM, TILE_DIM), 1)
+        pygame.draw.rect(window_surface, target_color, (x_coord, y_coord, TILE_DIM, TILE_DIM), 1)
 
     pygame.display.update()
