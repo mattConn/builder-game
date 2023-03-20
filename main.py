@@ -28,6 +28,7 @@ player.row_col = [initial_player_row, initial_player_col]
 
 blocking_tiles = ['#']
 mouse_down = False
+prevent_mouse_down = False
 
 #Run the game loop
 while True:
@@ -56,6 +57,7 @@ while True:
         # get mouse release
         elif event.type == MOUSEBUTTONUP:
             mouse_down = False
+            prevent_mouse_down = False
             player.action = None
 
         # get key press
@@ -64,7 +66,7 @@ while True:
 
 
     # process state after events handled
-    if mouse_down:
+    if mouse_down and not prevent_mouse_down:
         t = tuple_op(target_coords, lambda x: int(x/TILE_DIM))
         row = t[1] 
         col = t[0] 
@@ -86,8 +88,13 @@ while True:
             target_tile = current_room.get(row, col)
             if player.action == 'build' and target_tile == '':
                 current_room.set(row, col, '#')
-            elif player.action == 'break' and target_tile != '@':
+                player_event_log.add('built wooden fence at ' + str((col, row)))
+            elif player.action == 'break' and target_tile and target_tile != '@':
                 current_room.set(row, col, '')
+                player_event_log.add('broke wooden fence at ' + str((col, row)))
+        else:
+            player_event_log.add('out of range at ' + str((col, row)))
+            prevent_mouse_down = True 
 
     # draw blocks
     for row_index, row in enumerate(current_room.matrix):
@@ -113,14 +120,42 @@ while True:
     x_coord_normalized = target_coords_normalized[0]
     y_coord_normalized = target_coords_normalized[1]
 
+    # for describing tile to player
+    looking_at_description = ''
+
     # check if target in bounds
     if check_bounds(current_room, y_coord_normalized, y_coord_normalized):
         print(target_coords, target_coords_normalized)
+
+        # set tile description
+        looking_at_tile = current_room.get(y_coord_normalized, x_coord_normalized)
+        looking_at_description = descriptions.get(looking_at_tile)
 
         target_color = colors.white 
         if abs(player.row_col[1] - x_coord_normalized) <= player.reach and abs(player.row_col[0] - y_coord_normalized) <= player.reach:
             target_color = colors.green
 
         pygame.draw.rect(window_surface, target_color, (x_coord, y_coord, TILE_DIM, TILE_DIM), 1)
+
+    # draw text area
+    text_area = pygame.Rect(0, current_room.height * TILE_DIM, WIDTH, TILE_DIM * 11)
+    pygame.draw.rect(window_surface, colors.black, text_area)
+
+    # draw text to text area
+    if looking_at_description:
+        message = 'Looking at ' + looking_at_description + ' at ' + str(( x_coord_normalized, y_coord_normalized))
+        text = main_font.render(message, True, colors.white, colors.black)
+        text_rect = text.get_rect()
+        # set coordinates to top left of text area
+        text_rect.topleft = (0, current_room.height * TILE_DIM)
+        window_surface.blit(text, text_rect)
+
+    # render event log
+    for i, event in enumerate(player_event_log.log):
+        text = main_font.render(event, True, colors.white, colors.black)
+        text_rect = text.get_rect()
+        text_rect.topleft = (0, current_room.height * TILE_DIM + TILE_DIM * (i + 1))
+        window_surface.blit(text, text_rect)
+
 
     pygame.display.update()

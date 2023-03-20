@@ -45,3 +45,22 @@ class Room:
 
 # 27 height leaves room for text
 current_room = Room(50, 27)
+
+class EventLog:
+    def __init__(self, length):
+        self.log = ['' for i in range(length)]
+
+    def add(self, event):
+        self.log.pop(0)
+        self.log.append(event)
+
+    def get(self):
+        return self.log
+
+player_event_log = EventLog(9)
+
+descriptions = {
+    '': 'nothing',
+    '@': 'yourself',
+    '#': 'a wooden fence',
+}
